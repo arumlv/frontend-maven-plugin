@@ -13,27 +13,29 @@ import org.sonatype.plexus.build.incremental.BuildContext;
 
 import java.io.File;
 import java.util.Collections;
+import java.util.List;
 
-@Mojo(name="npm",  defaultPhase = LifecyclePhase.GENERATE_RESOURCES, threadSafe = true)
+@Mojo(name = "npm", defaultPhase = LifecyclePhase.GENERATE_RESOURCES, threadSafe = true)
 public final class NpmMojo extends AbstractFrontendMojo {
 
     private static final String NPM_REGISTRY_URL = "npmRegistryURL";
-    
+
     /**
      * npm arguments. Default is "install".
      */
-    @Parameter(defaultValue = "install", property = "frontend.npm.arguments", required = false)
+    @Parameter(defaultValue = "run build-maven", property = "frontend.npm.arguments", required = false)
     private String arguments;
 
     @Parameter(property = "frontend.npm.npmInheritsProxyConfigFromMaven", required = false, defaultValue = "true")
     private boolean npmInheritsProxyConfigFromMaven;
 
     /**
-     * Registry override, passed as the registry option during npm install if set.
+     * Registry override, passed as the registry option during npm install if
+     * set.
      */
     @Parameter(property = NPM_REGISTRY_URL, required = false, defaultValue = "")
     private String npmRegistryURL;
-    
+
     @Parameter(property = "session", defaultValue = "${session}", readonly = true)
     private MavenSession session;
 
@@ -51,6 +53,24 @@ public final class NpmMojo extends AbstractFrontendMojo {
 
     @Override
     protected boolean skipExecution() {
+        if (session != null && session.getGoals() != null) {
+            List<String> goals = session.getGoals();
+            if (goals.contains("frontend:npm") || goals.contains("verify")) {
+                if (super.execution.getLifecyclePhase() != null
+                        && super.execution.getLifecyclePhase().equals("generate-resources")) {
+                    return false;
+                } else {
+                    getLog().warn("skip frontend:npm execution, lifecyclePhase "
+                            + super.execution.getLifecyclePhase() + " not equals generate-resources");
+                    return true;
+                }
+            } else {
+                getLog().warn("skip frontend:npm execution, by goals "
+                        + goals.toString() + " not contains: frontend:npm or verify");
+                return true;
+            }
+
+        }
         return this.skip;
     }
 
